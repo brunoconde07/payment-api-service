@@ -1,5 +1,7 @@
 package com.api.payment.payment_api_service.controller;
 
+import com.api.payment.payment_api_service.controller.dto.PatchPaymentRequest;
+import com.api.payment.payment_api_service.controller.dto.PatchPaymentResponse;
 import com.api.payment.payment_api_service.controller.dto.PostPaymentRequest;
 import com.api.payment.payment_api_service.controller.dto.PostPaymentResponse;
 import com.api.payment.payment_api_service.domain.PaymentStatusInit;
@@ -31,5 +33,16 @@ public class PaymentController {
         );
 
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
+    }
+
+    @PatchMapping
+    @Operation(summary = "Patch payment", description = "Update a payment status")
+    @ApiResponse(responseCode = "200", description = "Payment updated successfully")
+    public ResponseEntity<PatchPaymentResponse> patchPaymentResponse(@RequestBody PatchPaymentRequest request) {
+        PatchPaymentResponse response = new PatchPaymentResponse(
+                request.paymentId(),
+                request.paymentStatus()
+        );
+        return ResponseEntity.status(HttpStatus.OK).body(response);
     }
 }
