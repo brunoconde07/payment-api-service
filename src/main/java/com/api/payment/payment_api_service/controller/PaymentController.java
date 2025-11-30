@@ -3,6 +3,8 @@ package com.api.payment.payment_api_service.controller;
 import com.api.payment.payment_api_service.controller.dto.*;
 import com.api.payment.payment_api_service.domain.*;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springdoc.core.annotations.ParameterObject;
@@ -77,5 +79,12 @@ public class PaymentController {
         );
 
         return new GetPaymentsResponse(List.of(p1, p2));
+    }
+
+    @DeleteMapping("/{paymentId}")
+    @Operation(summary = "Delete payment", description = "Change payment status to INACTIVE (soft delete)")
+    @ApiResponse(responseCode = "200", description = "Payment deleted successfully", content = @Content(schema = @Schema(implementation = DeletePaymentResponse.class)))
+    public DeletePaymentResponse deletePayment(@PathVariable String paymentId) {
+        return new DeletePaymentResponse(paymentId, PaymentStatusDelete.INACTIVE);
     }
 }
