@@ -9,6 +9,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -20,9 +21,10 @@ import java.util.List;
 @Tag(name = "Payments", description = "Payment endpoints")
 public class PaymentController {
 
-    @PostMapping
+    @PostMapping(consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
+    @ResponseStatus(HttpStatus.CREATED)
     @Operation(summary = "Post payment", description = "Create a payment and returns its id and status (always PENDING)")
-    @ApiResponse(responseCode = "201", description = "Payment created successfully")
+    @ApiResponse(responseCode = "201", description = "Payment created successfully", content = @Content(mediaType = "application/json", schema = @Schema(implementation = PostPaymentResponse.class)))
     public ResponseEntity<PostPaymentResponse> postPayments(@RequestBody PostPaymentRequest request) {
         PostPaymentResponse response = new PostPaymentResponse(
                 request.paymentMethod(),
@@ -38,9 +40,10 @@ public class PaymentController {
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
-    @PatchMapping
+    @PatchMapping(consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
+    @ResponseStatus(HttpStatus.OK)
     @Operation(summary = "Patch payment", description = "Update a payment status")
-    @ApiResponse(responseCode = "200", description = "Payment updated successfully")
+    @ApiResponse(responseCode = "200", description = "Payment updated successfully", content = @Content(mediaType = "application/json", schema = @Schema(implementation = PatchPaymentResponse.class)))
     public ResponseEntity<PatchPaymentResponse> patchPaymentResponse(@RequestBody PatchPaymentRequest request) {
         PatchPaymentResponse response = new PatchPaymentResponse(
                 request.paymentId(),
@@ -49,9 +52,10 @@ public class PaymentController {
         return ResponseEntity.status(HttpStatus.OK).body(response);
     }
 
-    @GetMapping
+    @GetMapping(produces = MediaType.APPLICATION_JSON_VALUE)
+    @ResponseStatus(HttpStatus.OK)
     @Operation(summary = "Get payments", description = "Get payments. Filters are optional")
-    @ApiResponse(responseCode = "200", description = "Payments fetched successfully")
+    @ApiResponse(responseCode = "200", description = "Payments fetched successfully", content = @Content(mediaType = "application/json", schema = @Schema(implementation = GetPaymentsResponse.class)))
     public GetPaymentsResponse getPayments(@ParameterObject GetPaymentsFilter filter) {
 
         System.out.println(filter);
@@ -81,9 +85,10 @@ public class PaymentController {
         return new GetPaymentsResponse(List.of(p1, p2));
     }
 
-    @DeleteMapping("/{paymentId}")
+    @DeleteMapping(value = "/{paymentId}", produces = MediaType.APPLICATION_JSON_VALUE)
+    @ResponseStatus(HttpStatus.OK)
     @Operation(summary = "Delete payment", description = "Change payment status to INACTIVE (soft delete)")
-    @ApiResponse(responseCode = "200", description = "Payment deleted successfully", content = @Content(schema = @Schema(implementation = DeletePaymentResponse.class)))
+    @ApiResponse(responseCode = "200", description = "Payment deleted successfully", content = @Content(mediaType = "application/json", schema = @Schema(implementation = DeletePaymentResponse.class)))
     public DeletePaymentResponse deletePayment(@PathVariable String paymentId) {
         return new DeletePaymentResponse(paymentId, PaymentStatusDelete.INACTIVE);
     }
