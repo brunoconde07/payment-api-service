@@ -1,5 +1,7 @@
 package com.api.payment.payment_api_service.e2e;
 
+import com.api.payment.payment_api_service.controller.dto.PostPaymentRequest;
+import com.api.payment.payment_api_service.controller.dto.PostPaymentResponse;
 import com.api.payment.payment_api_service.domain.*;
 import com.api.payment.payment_api_service.domain.entity.PaymentEntity;
 import com.api.payment.payment_api_service.repository.PaymentRepository;
@@ -8,10 +10,12 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.server.LocalServerPort;
+import org.springframework.http.MediaType;
 import org.springframework.test.web.reactive.server.WebTestClient;
 
 import static io.restassured.module.jsv.JsonSchemaValidator.matchesJsonSchemaInClasspath;
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.everyItem;
 
@@ -31,7 +35,6 @@ class PaymentApiTest {
 
     @BeforeEach
     void setup() {
-        repository.deleteAll();
         this.webTestClient = WebTestClient.bindToServer()
                 .baseUrl("http://localhost:" + port)
                 .build();
@@ -162,5 +165,49 @@ class PaymentApiTest {
                     List<Integer> statuses = (List<Integer>) responseList;
                     assertThat(statuses, everyItem(equalTo(debtCode)));
                 });
+    }
+
+    @Test
+    void shouldPostPaymentWhenValidRequest() {
+        repository.deleteAll();
+
+        PostPaymentRequest postPaymentRequest = new PostPaymentRequest(
+                PaymentMethod.CREDIT_CARD,
+                new BigInteger("500000"),
+                1,
+                PayerType.CPF,
+                "123-123-123-00",
+                "1234123412341234"
+        );
+
+        PostPaymentResponse postPaymentResponse = webTestClient.post()
+                .uri("/api/v1/payments")
+                .contentType(MediaType.APPLICATION_JSON)
+                .bodyValue(postPaymentRequest)
+                .exchange()
+                .expectStatus().isCreated()
+                .expectBody(PostPaymentResponse.class)
+                .returnResult()
+                .getResponseBody();
+
+        assertThat(postPaymentResponse).isNotNull();
+        assertThat(postPaymentResponse.paymentMethod()).isEqualTo(postPaymentRequest.paymentMethod());
+        assertThat(postPaymentResponse.paymentValue()).isEqualTo(postPaymentRequest.paymentValue());
+        assertThat(postPaymentResponse.debtCode()).isEqualTo(postPaymentRequest.debtCode());
+        assertThat(postPaymentResponse.payerType()).isEqualTo(postPaymentRequest.payerType());
+        assertThat(postPaymentResponse.cardNumber()).isEqualTo(postPaymentRequest.cardNumber());
+
+        List<PaymentEntity> savedPaymentEntities = repository.findAll();
+
+        assertThat(savedPaymentEntities).hasSize(1);
+        PaymentEntity dbRecord = savedPaymentEntities.get(0);
+
+        assertThat(dbRecord.getId().toString()).isEqualTo(postPaymentResponse.paymentId());
+
+        assertThat(dbRecord.getPaymentMethod()).isEqualTo(postPaymentRequest.paymentMethod());
+        assertThat(dbRecord.getPaymentValue()).isEqualTo(postPaymentRequest.paymentValue());
+        assertThat(dbRecord.getDebtCode()).isEqualTo(postPaymentRequest.debtCode());
+        assertThat(dbRecord.getPayerType()).isEqualTo(postPaymentRequest.payerType());
+        assertThat(dbRecord.getCardNumber()).isEqualTo(postPaymentRequest.cardNumber());
     }
 }
