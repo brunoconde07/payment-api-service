@@ -140,8 +140,27 @@ class PaymentApiTest {
                 .jsonPath("$.data.length()").isEqualTo(3)
                 .jsonPath("$.data[*].payerId")
                 .value(responseList -> {
-                    List<String> statuses = (List<String>) responseList;
-                    assertThat(statuses, everyItem(equalTo(payerId)));
+                    List<String> payerIds = (List<String>) responseList;
+                    assertThat(payerIds, everyItem(equalTo(payerId)));
+                });
+    }
+
+    @Test
+    void shouldFilterByDebtCode() {
+        Integer debtCode = 0;
+        webTestClient.get()
+                .uri(uriBuilder -> uriBuilder
+                        .path("/api/v1/payments")
+                        .queryParam("debtCode", debtCode)
+                        .build())
+                .exchange()
+                .expectStatus().isOk()
+                .expectBody()
+                .jsonPath("$.data.length()").isEqualTo(2)
+                .jsonPath("$.data[*].debtCode")
+                .value(responseList -> {
+                    List<Integer> statuses = (List<Integer>) responseList;
+                    assertThat(statuses, everyItem(equalTo(debtCode)));
                 });
     }
 }
