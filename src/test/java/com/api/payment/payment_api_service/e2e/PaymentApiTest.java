@@ -12,8 +12,11 @@ import org.springframework.test.web.reactive.server.WebTestClient;
 
 import static io.restassured.module.jsv.JsonSchemaValidator.matchesJsonSchemaInClasspath;
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.equalTo;
+import static org.hamcrest.Matchers.everyItem;
 
 import java.math.BigInteger;
+import java.util.List;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 class PaymentApiTest {
@@ -75,10 +78,21 @@ class PaymentApiTest {
                 PaymentStatus.INACTIVE
         );
 
+        PaymentEntity p5 = new PaymentEntity(
+                PaymentMethod.PIX,
+                new BigInteger("2300"),
+                0,
+                PayerType.CNPJ,
+                "00-000-000/1234-00",
+                null,
+                PaymentStatus.INACTIVE
+        );
+
         repository.save(p1);
         repository.save(p2);
         repository.save(p3);
         repository.save(p4);
+        repository.save(p5);
     }
 
     @Test
@@ -90,6 +104,25 @@ class PaymentApiTest {
                 .expectBody(String.class)
                 .value(jsonBody -> {
                     assertThat(jsonBody, matchesJsonSchemaInClasspath("payment-schema.json"));
+                });
+    }
+
+    @Test
+    void shouldFilterByStatus() {
+        String paymentStatus = "INACTIVE";
+        webTestClient.get()
+                .uri(uriBuilder -> uriBuilder
+                        .path("/api/v1/payments")
+                        .queryParam("paymentStatus", paymentStatus)
+                        .build())
+                .exchange()
+                .expectStatus().isOk()
+                .expectBody()
+                .jsonPath("$.data.length()").isEqualTo(2)
+                .jsonPath("$.data[*].paymentStatus")
+                .value(responseList -> {
+                    List<String> statuses = (List<String>) responseList;
+                    assertThat(statuses, everyItem(equalTo(paymentStatus)));
                 });
     }
 }
