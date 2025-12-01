@@ -4,7 +4,7 @@ import com.api.payment.payment_api_service.domain.PayerType;
 import com.api.payment.payment_api_service.domain.PaymentMethod;
 import io.swagger.v3.oas.annotations.media.Schema;
 
-import java.math.BigDecimal;
+import java.math.BigInteger;
 
 
 public record PostPaymentRequest(
@@ -12,7 +12,7 @@ public record PostPaymentRequest(
         PaymentMethod paymentMethod,
 
         @Schema(description = "Payment value", example = "100")
-        BigDecimal paymentValue,
+        BigInteger paymentValue,
 
         @Schema(description = "Debt code", example = "123")
         Integer debtCode,

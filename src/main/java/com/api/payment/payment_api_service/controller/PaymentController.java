@@ -35,14 +35,26 @@ public class PaymentController {
     @Operation(summary = "Post payment", description = "Create a payment and returns its id and status (always PENDING)")
     @ApiResponse(responseCode = "201", description = "Payment created successfully", content = @Content(mediaType = "application/json", schema = @Schema(implementation = PostPaymentResponse.class)))
     public ResponseEntity<PostPaymentResponse> postPayments(@RequestBody PostPaymentRequest request) {
-        PostPaymentResponse response = new PostPaymentResponse(
+        PaymentEntity paymentEntity = new PaymentEntity(
                 request.paymentMethod(),
                 request.paymentValue(),
                 request.debtCode(),
                 request.payerType(),
                 request.payerId(),
                 request.cardNumber(),
-                "12312321",
+                PaymentStatus.PENDING
+        );
+
+        PaymentEntity savedPaymentEntity = repository.save(paymentEntity);
+
+        PostPaymentResponse response = new PostPaymentResponse(
+                savedPaymentEntity.getPaymentMethod(),
+                savedPaymentEntity.getPaymentValue(),
+                savedPaymentEntity.getDebtCode(),
+                savedPaymentEntity.getPayerType(),
+                savedPaymentEntity.getPayerId(),
+                savedPaymentEntity.getCardNumber(),
+                savedPaymentEntity.getId().toString(),
                 PaymentStatusInit.PENDING
         );
 
