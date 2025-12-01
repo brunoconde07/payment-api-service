@@ -70,4 +70,8 @@ public class PaymentEntity {
     public void setDebtCode(Integer debtCode) {
         this.debtCode = debtCode;
     }
+
+    public void setPayerId(String payerId) {
+        this.payerId = payerId;
+    }
 }

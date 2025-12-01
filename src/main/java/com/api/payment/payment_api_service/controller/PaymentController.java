@@ -70,6 +70,7 @@ public class PaymentController {
 
         probe.setPaymentStatus(filter.paymentStatus());
         probe.setDebtCode(filter.debtCode());
+        probe.setPayerId(filter.payerId());
 
         ExampleMatcher matcher = ExampleMatcher.matching()
                 .withIgnoreNullValues();
