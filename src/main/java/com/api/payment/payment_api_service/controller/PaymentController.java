@@ -9,6 +9,7 @@ import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.data.domain.Example;
 import org.springframework.data.domain.ExampleMatcher;
@@ -34,15 +35,40 @@ public class PaymentController {
     @ResponseStatus(HttpStatus.CREATED)
     @Operation(summary = "Post payment", description = "Create a payment and returns its id and status (always PENDING)")
     @ApiResponse(responseCode = "201", description = "Payment created successfully", content = @Content(mediaType = "application/json", schema = @Schema(implementation = PostPaymentResponse.class)))
-    public ResponseEntity<PostPaymentResponse> postPayments(@RequestBody PostPaymentRequest request) {
-        PostPaymentResponse response = new PostPaymentResponse(
+    public ResponseEntity<PostPaymentResponse> postPayments(@Valid @RequestBody PostPaymentRequest request) {
+
+        if (request.paymentMethod() == PaymentMethod.CREDIT_CARD || request.paymentMethod() == PaymentMethod.DEBIT_CARD) {
+            if (request.cardNumber() == null) {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
+            }
+        }
+
+        if (request.paymentMethod() != PaymentMethod.CREDIT_CARD && request.paymentMethod() != PaymentMethod.DEBIT_CARD) {
+            if (request.cardNumber() != null) {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
+            }
+        }
+
+        PaymentEntity paymentEntity = new PaymentEntity(
                 request.paymentMethod(),
                 request.paymentValue(),
                 request.debtCode(),
                 request.payerType(),
                 request.payerId(),
                 request.cardNumber(),
-                "12312321",
+                PaymentStatus.PENDING
+        );
+
+        PaymentEntity savedPaymentEntity = repository.save(paymentEntity);
+
+        PostPaymentResponse response = new PostPaymentResponse(
+                savedPaymentEntity.getPaymentMethod(),
+                savedPaymentEntity.getPaymentValue(),
+                savedPaymentEntity.getDebtCode(),
+                savedPaymentEntity.getPayerType(),
+                savedPaymentEntity.getPayerId(),
+                savedPaymentEntity.getCardNumber(),
+                savedPaymentEntity.getId().toString(),
                 PaymentStatusInit.PENDING
         );
 
