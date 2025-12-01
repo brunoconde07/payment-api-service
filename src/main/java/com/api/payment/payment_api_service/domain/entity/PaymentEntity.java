@@ -62,4 +62,8 @@ public class PaymentEntity {
     public String getPayerId() { return payerId; }
     public String getCardNumber() { return cardNumber; }
     public PaymentStatus getPaymentStatus() { return paymentStatus; }
+
+    public void setPaymentStatus(PaymentStatus paymentStatus) {
+        this.paymentStatus = paymentStatus;
+    }
 }

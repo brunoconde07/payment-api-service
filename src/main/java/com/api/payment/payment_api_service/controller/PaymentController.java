@@ -10,6 +10,8 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springdoc.core.annotations.ParameterObject;
+import org.springframework.data.domain.Example;
+import org.springframework.data.domain.ExampleMatcher;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -64,10 +66,19 @@ public class PaymentController {
     @Operation(summary = "Get payments", description = "Get payments. Filters are optional")
     @ApiResponse(responseCode = "200", description = "Payments fetched successfully", content = @Content(mediaType = "application/json", schema = @Schema(implementation = GetPaymentsResponse.class)))
     public GetPaymentsResponse getPayments(@ParameterObject GetPaymentsFilter filter) {
-        System.out.println(filter);
-        List<PaymentEntity> paymentEntities = this.repository.findAll();
-        List<PaymentResponse> dtos = paymentEntities.stream().map(this::mapToResponse).toList();
-        return new GetPaymentsResponse(dtos);
+        PaymentEntity probe = new PaymentEntity();
+
+        probe.setPaymentStatus(filter.paymentStatus());
+
+        ExampleMatcher matcher = ExampleMatcher.matching()
+                .withIgnoreNullValues();
+        Example<PaymentEntity> example = Example.of(probe, matcher);
+
+        List<PaymentEntity> paymentEntities = repository.findAll(example);
+
+        List<PaymentResponse> paymentDtos = paymentEntities.stream().map(this::mapToResponse).toList();
+
+        return new GetPaymentsResponse(paymentDtos);
     }
 
     @DeleteMapping(value = "/{paymentId}", produces = MediaType.APPLICATION_JSON_VALUE)
