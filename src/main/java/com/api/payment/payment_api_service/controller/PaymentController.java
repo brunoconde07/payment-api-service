@@ -2,24 +2,33 @@ package com.api.payment.payment_api_service.controller;
 
 import com.api.payment.payment_api_service.controller.dto.*;
 import com.api.payment.payment_api_service.domain.*;
+import com.api.payment.payment_api_service.domain.entity.PaymentEntity;
+import com.api.payment.payment_api_service.repository.PaymentRepository;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springdoc.core.annotations.ParameterObject;
+import org.springframework.data.domain.Example;
+import org.springframework.data.domain.ExampleMatcher;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.math.BigDecimal;
 import java.util.List;
 
 @RestController
 @RequestMapping("/api/v1/payments")
 @Tag(name = "Payments", description = "Payment endpoints")
 public class PaymentController {
+
+    private final PaymentRepository repository;
+
+    public PaymentController(PaymentRepository repository) {
+        this.repository = repository;
+    }
 
     @PostMapping(consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
     @ResponseStatus(HttpStatus.CREATED)
@@ -57,32 +66,21 @@ public class PaymentController {
     @Operation(summary = "Get payments", description = "Get payments. Filters are optional")
     @ApiResponse(responseCode = "200", description = "Payments fetched successfully", content = @Content(mediaType = "application/json", schema = @Schema(implementation = GetPaymentsResponse.class)))
     public GetPaymentsResponse getPayments(@ParameterObject GetPaymentsFilter filter) {
+        PaymentEntity probe = new PaymentEntity();
 
-        System.out.println(filter);
+        probe.setPaymentStatus(filter.paymentStatus());
+        probe.setDebtCode(filter.debtCode());
+        probe.setPayerId(filter.payerId());
 
-        PaymentResponse p1 = new PaymentResponse(
-                PaymentMethod.CREDIT_CARD,
-                new BigDecimal("5000"),
-                123,
-                PayerType.CNPJ,
-                "123.123.123-89",
-                "1234123412341234",
-                "4354324",
-                PaymentStatus.PROCESSED_SUCCESSFULLY
-        );
+        ExampleMatcher matcher = ExampleMatcher.matching()
+                .withIgnoreNullValues();
+        Example<PaymentEntity> example = Example.of(probe, matcher);
 
-        PaymentResponse p2 = new PaymentResponse(
-                PaymentMethod.PIX,
-                new BigDecimal("5000"),
-                123,
-                PayerType.CPF,
-                "123.123.123-89",
-                null,
-                "4354324",
-                PaymentStatus.PROCESSED_SUCCESSFULLY
-        );
+        List<PaymentEntity> paymentEntities = repository.findAll(example);
 
-        return new GetPaymentsResponse(List.of(p1, p2));
+        List<PaymentResponse> paymentDtos = paymentEntities.stream().map(this::mapToResponse).toList();
+
+        return new GetPaymentsResponse(paymentDtos);
     }
 
     @DeleteMapping(value = "/{paymentId}", produces = MediaType.APPLICATION_JSON_VALUE)
@@ -91,5 +89,18 @@ public class PaymentController {
     @ApiResponse(responseCode = "200", description = "Payment deleted successfully", content = @Content(mediaType = "application/json", schema = @Schema(implementation = DeletePaymentResponse.class)))
     public DeletePaymentResponse deletePayment(@PathVariable String paymentId) {
         return new DeletePaymentResponse(paymentId, PaymentStatusDelete.INACTIVE);
+    }
+
+    private PaymentResponse mapToResponse(PaymentEntity entity) {
+        return new PaymentResponse(
+                entity.getPaymentMethod(),
+                entity.getPaymentValue(),
+                entity.getDebtCode(),
+                entity.getPayerType(),
+                entity.getPayerId(),
+                entity.getCardNumber(),
+                entity.getId().toString(),
+                entity.getPaymentStatus()
+        );
     }
 }
