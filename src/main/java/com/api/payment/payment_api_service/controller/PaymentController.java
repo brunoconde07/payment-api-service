@@ -10,6 +10,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotNull;
 import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.data.domain.Example;
 import org.springframework.data.domain.ExampleMatcher;
@@ -17,8 +18,10 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
+import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/v1/payments")
@@ -97,6 +100,7 @@ public class PaymentController {
         probe.setPaymentStatus(filter.paymentStatus());
         probe.setDebtCode(filter.debtCode());
         probe.setPayerId(filter.payerId());
+        probe.setIsDeleted(false);
 
         ExampleMatcher matcher = ExampleMatcher.matching()
                 .withIgnoreNullValues();
@@ -112,9 +116,26 @@ public class PaymentController {
     @DeleteMapping(value = "/{paymentId}", produces = MediaType.APPLICATION_JSON_VALUE)
     @ResponseStatus(HttpStatus.OK)
     @Operation(summary = "Delete payment", description = "Change payment status to INACTIVE (soft delete)")
-    @ApiResponse(responseCode = "200", description = "Payment deleted successfully", content = @Content(mediaType = "application/json", schema = @Schema(implementation = DeletePaymentResponse.class)))
-    public DeletePaymentResponse deletePayment(@PathVariable String paymentId) {
-        return new DeletePaymentResponse(paymentId, PaymentStatusDelete.INACTIVE);
+    @ApiResponse(responseCode = "200", description = "Payment deleted successfully", content = @Content(mediaType = "application/json", schema = @Schema(implementation = PaymentResponse.class)))
+    public PaymentResponse deletePayment(@PathVariable @NotNull String paymentId) {
+        UUID uuid;
+        try {
+            uuid = UUID.fromString(paymentId);
+        } catch (IllegalArgumentException e) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid UUID format");
+        }
+
+        PaymentEntity paymentEntity = repository.findById(uuid)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Payment not found"));
+
+        paymentEntity.setIsDeleted(true);
+
+        if (paymentEntity.getPaymentStatus() == PaymentStatus.PENDING) {
+            paymentEntity.setPaymentStatus(PaymentStatus.INACTIVE);
+        }
+
+        PaymentEntity deletedPaymentEntity = repository.save(paymentEntity);
+        return mapToResponse(deletedPaymentEntity);
     }
 
     private PaymentResponse mapToResponse(PaymentEntity entity) {
