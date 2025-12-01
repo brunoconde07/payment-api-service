@@ -125,4 +125,23 @@ class PaymentApiTest {
                     assertThat(statuses, everyItem(equalTo(paymentStatus)));
                 });
     }
+
+    @Test
+    void shouldFilterByPayerId() {
+        String payerId = "00-000-000/1234-00";
+        webTestClient.get()
+                .uri(uriBuilder -> uriBuilder
+                        .path("/api/v1/payments")
+                        .queryParam("payerId", payerId)
+                        .build())
+                .exchange()
+                .expectStatus().isOk()
+                .expectBody()
+                .jsonPath("$.data.length()").isEqualTo(3)
+                .jsonPath("$.data[*].payerId")
+                .value(responseList -> {
+                    List<String> statuses = (List<String>) responseList;
+                    assertThat(statuses, everyItem(equalTo(payerId)));
+                });
+    }
 }
