@@ -17,6 +17,9 @@ public class PaymentEntity {
     @Column(nullable = false, updatable = false)
     private UUID id;
 
+    @Column(nullable = false, columnDefinition = "boolean default false")
+    private boolean isDeleted = false;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private PaymentMethod paymentMethod;
@@ -62,6 +65,7 @@ public class PaymentEntity {
     public String getPayerId() { return payerId; }
     public String getCardNumber() { return cardNumber; }
     public PaymentStatus getPaymentStatus() { return paymentStatus; }
+    public boolean getIsDeleted() { return isDeleted; }
 
     public void setPaymentStatus(PaymentStatus paymentStatus) {
         this.paymentStatus = paymentStatus;
@@ -73,5 +77,9 @@ public class PaymentEntity {
 
     public void setPayerId(String payerId) {
         this.payerId = payerId;
+    }
+
+    public void setIsDeleted(boolean isDeleted) {
+        this.isDeleted = isDeleted;
     }
 }
