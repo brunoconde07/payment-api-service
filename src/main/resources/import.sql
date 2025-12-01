@@ -1,0 +1,2 @@
+INSERT INTO payment (id, payment_method, payment_value, payment_status, debt_code, payer_type, payer_id, card_number) VALUES ('a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11', 'CREDIT_CARD', 500000, 'PENDING', 1234, 'CPF', '123-123-123-00', '1234123412341234');
+INSERT INTO payment (id, payment_method, payment_value, payment_status, debt_code, payer_type, payer_id, card_number) VALUES ('b1eebc99-9c0b-4ef8-bb6d-6bb9bd380a22', 'PIX', 15050, 'PROCESSED_SUCCESSFULLY', 1234, 'CNPJ', '00-000-000/1234-00', null);
