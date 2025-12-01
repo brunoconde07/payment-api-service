@@ -69,6 +69,7 @@ public class PaymentController {
         PaymentEntity probe = new PaymentEntity();
 
         probe.setPaymentStatus(filter.paymentStatus());
+        probe.setDebtCode(filter.debtCode());
 
         ExampleMatcher matcher = ExampleMatcher.matching()
                 .withIgnoreNullValues();

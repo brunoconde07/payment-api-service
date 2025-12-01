@@ -66,4 +66,8 @@ public class PaymentEntity {
     public void setPaymentStatus(PaymentStatus paymentStatus) {
         this.paymentStatus = paymentStatus;
     }
+
+    public void setDebtCode(Integer debtCode) {
+        this.debtCode = debtCode;
+    }
 }
