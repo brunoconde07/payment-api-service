@@ -14,7 +14,7 @@ public class PaymentEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
-    @Column(nullable = false)
+    @Column(nullable = false, updatable = false)
     private UUID id;
 
     @Enumerated(EnumType.STRING)
