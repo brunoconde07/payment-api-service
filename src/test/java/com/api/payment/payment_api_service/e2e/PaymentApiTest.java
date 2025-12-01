@@ -278,4 +278,50 @@ class PaymentApiTest {
                 .exchange()
                 .expectStatus().isBadRequest();
     }
+
+    @Test
+    void shouldSoftDeleteAndPreserveStatusWhenNotPending() {
+        repository.deleteAll();
+        PaymentEntity originalPaymentEntity = repository.save(new PaymentEntity(
+                PaymentMethod.CREDIT_CARD,
+                new BigInteger("500000"),
+                1,
+                PayerType.CPF,
+                "123-123-123-00",
+                "1234123412341234",
+                PaymentStatus.PROCESSED_SUCCESSFULLY
+        ));
+
+        webTestClient.delete()
+                .uri("/api/v1/payments/" + originalPaymentEntity.getId())
+                .exchange()
+                .expectStatus().isOk();
+
+        PaymentEntity deletedPayment = repository.findById(originalPaymentEntity.getId()).orElseThrow();
+        assertThat(deletedPayment.getIsDeleted()).isTrue();
+        assertThat(deletedPayment.getPaymentStatus()).isEqualTo(PaymentStatus.PROCESSED_SUCCESSFULLY);
+    }
+
+    @Test
+    void shouldSoftDeleteAndInactiveWhenStatusIsPending() {
+        repository.deleteAll();
+        PaymentEntity originalPaymentEntity = repository.save(new PaymentEntity(
+                PaymentMethod.CREDIT_CARD,
+                new BigInteger("500000"),
+                1,
+                PayerType.CPF,
+                "123-123-123-00",
+                "1234123412341234",
+                PaymentStatus.PENDING
+        ));
+
+        webTestClient.delete()
+                .uri("/api/v1/payments/" + originalPaymentEntity.getId())
+                .exchange()
+                .expectStatus().isOk();
+
+        PaymentEntity deletedPayment = repository.findById(originalPaymentEntity.getId()).orElseThrow();
+        assertThat(deletedPayment.getIsDeleted()).isTrue();
+        assertThat(deletedPayment.getPaymentStatus()).isEqualTo(PaymentStatus.INACTIVE);
+    }
 }
