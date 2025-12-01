@@ -2,6 +2,8 @@ package com.api.payment.payment_api_service.controller;
 
 import com.api.payment.payment_api_service.controller.dto.*;
 import com.api.payment.payment_api_service.domain.*;
+import com.api.payment.payment_api_service.domain.entity.PaymentEntity;
+import com.api.payment.payment_api_service.repository.PaymentRepository;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -13,13 +15,18 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.math.BigDecimal;
 import java.util.List;
 
 @RestController
 @RequestMapping("/api/v1/payments")
 @Tag(name = "Payments", description = "Payment endpoints")
 public class PaymentController {
+
+    private final PaymentRepository repository;
+
+    public PaymentController(PaymentRepository repository) {
+        this.repository = repository;
+    }
 
     @PostMapping(consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
     @ResponseStatus(HttpStatus.CREATED)
@@ -57,32 +64,10 @@ public class PaymentController {
     @Operation(summary = "Get payments", description = "Get payments. Filters are optional")
     @ApiResponse(responseCode = "200", description = "Payments fetched successfully", content = @Content(mediaType = "application/json", schema = @Schema(implementation = GetPaymentsResponse.class)))
     public GetPaymentsResponse getPayments(@ParameterObject GetPaymentsFilter filter) {
-
         System.out.println(filter);
-
-        PaymentResponse p1 = new PaymentResponse(
-                PaymentMethod.CREDIT_CARD,
-                new BigDecimal("5000"),
-                123,
-                PayerType.CNPJ,
-                "123.123.123-89",
-                "1234123412341234",
-                "4354324",
-                PaymentStatus.PROCESSED_SUCCESSFULLY
-        );
-
-        PaymentResponse p2 = new PaymentResponse(
-                PaymentMethod.PIX,
-                new BigDecimal("5000"),
-                123,
-                PayerType.CPF,
-                "123.123.123-89",
-                null,
-                "4354324",
-                PaymentStatus.PROCESSED_SUCCESSFULLY
-        );
-
-        return new GetPaymentsResponse(List.of(p1, p2));
+        List<PaymentEntity> paymentEntities = this.repository.findAll();
+        List<PaymentResponse> dtos = paymentEntities.stream().map(this::mapToResponse).toList();
+        return new GetPaymentsResponse(dtos);
     }
 
     @DeleteMapping(value = "/{paymentId}", produces = MediaType.APPLICATION_JSON_VALUE)
@@ -91,5 +76,18 @@ public class PaymentController {
     @ApiResponse(responseCode = "200", description = "Payment deleted successfully", content = @Content(mediaType = "application/json", schema = @Schema(implementation = DeletePaymentResponse.class)))
     public DeletePaymentResponse deletePayment(@PathVariable String paymentId) {
         return new DeletePaymentResponse(paymentId, PaymentStatusDelete.INACTIVE);
+    }
+
+    private PaymentResponse mapToResponse(PaymentEntity entity) {
+        return new PaymentResponse(
+                entity.getPaymentMethod(),
+                entity.getPaymentValue(),
+                entity.getDebtCode(),
+                entity.getPayerType(),
+                entity.getPayerId(),
+                entity.getCardNumber(),
+                entity.getId().toString(),
+                entity.getPaymentStatus()
+        );
     }
 }

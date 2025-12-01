@@ -5,11 +5,11 @@ import com.api.payment.payment_api_service.domain.PaymentMethod;
 import com.api.payment.payment_api_service.domain.PaymentStatus;
 import io.swagger.v3.oas.annotations.media.Schema;
 
-import java.math.BigDecimal;
+import java.math.BigInteger;
 
 public record PaymentResponse(
         PaymentMethod paymentMethod,
-        BigDecimal paymentValue,
+        BigInteger paymentValue,
         Integer debtCode,
         PayerType payerType,
         String payerId,
