@@ -210,4 +210,72 @@ class PaymentApiTest {
         assertThat(dbRecord.getPayerType()).isEqualTo(postPaymentRequest.payerType());
         assertThat(dbRecord.getCardNumber()).isEqualTo(postPaymentRequest.cardNumber());
     }
+
+    @Test
+    void shouldNotPostPaymentWhenInvalidRequest() {
+
+        String validCardNumber = "1234123412341234";
+        String invalidCardNumberPattern = "any";
+
+        PostPaymentRequest postPaymentRequest1InvalidNullCardNumberForValidPaymentMethod = new PostPaymentRequest(
+                PaymentMethod.CREDIT_CARD,
+                new BigInteger("500000"),
+                1,
+                PayerType.CPF,
+                "123-123-123-00",
+                null
+        );
+
+        PostPaymentRequest postPaymentRequest2InvalidCardNumberPatternForValidPaymentMethod = new PostPaymentRequest(
+                PaymentMethod.DEBIT_CARD,
+                new BigInteger("500000"),
+                1,
+                PayerType.CPF,
+                "123-123-123-00",
+                invalidCardNumberPattern
+        );
+
+        PostPaymentRequest postPaymentRequest3InvalidPaymentMethodForValidCardNumber = new PostPaymentRequest(
+                PaymentMethod.PIX,
+                new BigInteger("500000"),
+                1,
+                PayerType.CPF,
+                "123-123-123-00",
+                validCardNumber
+        );
+
+        PostPaymentRequest postPaymentRequest4InvalidPaymentMethodForValidCardNumber = new PostPaymentRequest(
+                PaymentMethod.BANK_SLIP,
+                new BigInteger("500000"),
+                1,
+                PayerType.CPF,
+                "123-123-123-00",
+                validCardNumber
+        );
+
+        webTestClient.post()
+                .uri("/api/v1/payments")
+                .bodyValue(postPaymentRequest1InvalidNullCardNumberForValidPaymentMethod)
+                .exchange()
+                .expectStatus().isBadRequest();
+
+
+        webTestClient.post()
+                .uri("/api/v1/payments")
+                .bodyValue(postPaymentRequest2InvalidCardNumberPatternForValidPaymentMethod)
+                .exchange()
+                .expectStatus().isBadRequest();
+
+        webTestClient.post()
+                .uri("/api/v1/payments")
+                .bodyValue(postPaymentRequest3InvalidPaymentMethodForValidCardNumber)
+                .exchange()
+                .expectStatus().isBadRequest();
+
+        webTestClient.post()
+                .uri("/api/v1/payments")
+                .bodyValue(postPaymentRequest4InvalidPaymentMethodForValidCardNumber)
+                .exchange()
+                .expectStatus().isBadRequest();
+    }
 }
