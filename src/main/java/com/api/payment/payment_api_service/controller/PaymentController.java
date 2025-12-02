@@ -78,15 +78,50 @@ public class PaymentController {
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
-    @PatchMapping(consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
+    @PatchMapping(value = "/{paymentId}", consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
     @ResponseStatus(HttpStatus.OK)
     @Operation(summary = "Patch payment", description = "Update a payment status")
     @ApiResponse(responseCode = "200", description = "Payment updated successfully", content = @Content(mediaType = "application/json", schema = @Schema(implementation = PatchPaymentResponse.class)))
-    public ResponseEntity<PatchPaymentResponse> patchPaymentResponse(@RequestBody PatchPaymentRequest request) {
-        PatchPaymentResponse response = new PatchPaymentResponse(
-                request.paymentId(),
-                request.paymentStatus()
-        );
+    public ResponseEntity<PaymentResponse> patchPaymentResponse(@PathVariable String paymentId, @RequestBody PatchPaymentRequest request) {
+
+        UUID uuid;
+        try {
+            uuid = UUID.fromString(paymentId);
+        } catch (IllegalArgumentException e) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid UUID format");
+        }
+
+        PaymentEntity paymentEntity = repository.findById(uuid)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Payment not found"));
+
+        if (PaymentStatus.PENDING.equals(paymentEntity.getPaymentStatus())) {
+            if (request.paymentStatus() != PaymentStatus.PROCESSED_SUCCESSFULLY && request.paymentStatus() != PaymentStatus.PROCESSING_ERROR) {
+                throw new ResponseStatusException(
+                        HttpStatus.UNPROCESSABLE_CONTENT
+                );
+            }
+        }
+
+        if (PaymentStatus.PROCESSED_SUCCESSFULLY.equals(paymentEntity.getPaymentStatus())) {
+            throw new ResponseStatusException(
+                    HttpStatus.UNPROCESSABLE_CONTENT
+            );
+        }
+
+        if (PaymentStatus.PROCESSING_ERROR.equals(paymentEntity.getPaymentStatus())) {
+            if (request.paymentStatus() != PaymentStatus.PENDING) {
+                throw new ResponseStatusException(
+                        HttpStatus.UNPROCESSABLE_CONTENT
+                );
+            }
+        }
+
+        paymentEntity.setPaymentStatus(request.paymentStatus());
+
+        PaymentEntity paymentEntitySaved = repository.save(paymentEntity);
+
+        PaymentResponse response = mapToResponse(paymentEntitySaved);
+
         return ResponseEntity.status(HttpStatus.OK).body(response);
     }
 
@@ -100,7 +135,8 @@ public class PaymentController {
         probe.setPaymentStatus(filter.paymentStatus());
         probe.setDebtCode(filter.debtCode());
         probe.setPayerId(filter.payerId());
-        probe.setIsDeleted(false);
+
+        probe.setIsDeleted(PaymentStatus.INACTIVE.equals(filter.paymentStatus()));
 
         ExampleMatcher matcher = ExampleMatcher.matching()
                 .withIgnoreNullValues();
