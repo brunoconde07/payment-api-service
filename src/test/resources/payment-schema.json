@@ -1,0 +1,33 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "required": ["data"],
+  "properties": {
+    "data": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "paymentMethod", "paymentValue", "debtCode", "payerType",
+          "payerId", "paymentId", "paymentStatus"
+        ],
+        "properties": {
+          "paymentMethod": {
+            "type": "string",
+            "enum": ["CREDIT_CARD", "PIX", "DEBT_CARD", "BANK_SLIP"]
+          },
+          "paymentValue": { "type": "integer" },
+          "debtCode": { "type": "integer" },
+          "payerType": { "type": "string", "enum": ["CPF", "CNPJ"] },
+          "payerId": { "type": "string" },
+          "cardNumber": { "type": ["string", "null"] },
+          "paymentId": { "type": "string", "format": "uuid" },
+          "paymentStatus": {
+            "type": "string",
+            "enum": ["PENDING", "PROCESSED_SUCCESSFULLY", "PROCESSING_ERROR", "INACTIVE"]
+          }
+        }
+      }
+    }
+  }
+}
