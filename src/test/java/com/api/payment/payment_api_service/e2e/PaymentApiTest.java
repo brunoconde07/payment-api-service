@@ -1,5 +1,6 @@
 package com.api.payment.payment_api_service.e2e;
 
+import com.api.payment.payment_api_service.controller.dto.PatchPaymentRequest;
 import com.api.payment.payment_api_service.controller.dto.PostPaymentRequest;
 import com.api.payment.payment_api_service.controller.dto.PostPaymentResponse;
 import com.api.payment.payment_api_service.domain.*;
@@ -10,6 +11,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.server.LocalServerPort;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.reactive.server.WebTestClient;
 
@@ -81,6 +83,8 @@ class PaymentApiTest {
                 PaymentStatus.INACTIVE
         );
 
+        p4.setIsDeleted(true);
+
         PaymentEntity p5 = new PaymentEntity(
                 PaymentMethod.PIX,
                 new BigInteger("2300"),
@@ -90,6 +94,8 @@ class PaymentApiTest {
                 null,
                 PaymentStatus.INACTIVE
         );
+
+        p5.setIsDeleted(true);
 
         repository.save(p1);
         repository.save(p2);
@@ -140,7 +146,7 @@ class PaymentApiTest {
                 .exchange()
                 .expectStatus().isOk()
                 .expectBody()
-                .jsonPath("$.data.length()").isEqualTo(3)
+                .jsonPath("$.data.length()").isEqualTo(1)
                 .jsonPath("$.data[*].payerId")
                 .value(responseList -> {
                     List<String> payerIds = (List<String>) responseList;
@@ -150,7 +156,7 @@ class PaymentApiTest {
 
     @Test
     void shouldFilterByDebtCode() {
-        Integer debtCode = 0;
+        Integer debtCode = 99;
         webTestClient.get()
                 .uri(uriBuilder -> uriBuilder
                         .path("/api/v1/payments")
@@ -159,7 +165,7 @@ class PaymentApiTest {
                 .exchange()
                 .expectStatus().isOk()
                 .expectBody()
-                .jsonPath("$.data.length()").isEqualTo(2)
+                .jsonPath("$.data.length()").isEqualTo(1)
                 .jsonPath("$.data[*].debtCode")
                 .value(responseList -> {
                     List<Integer> statuses = (List<Integer>) responseList;
@@ -323,5 +329,226 @@ class PaymentApiTest {
         PaymentEntity deletedPayment = repository.findById(originalPaymentEntity.getId()).orElseThrow();
         assertThat(deletedPayment.getIsDeleted()).isTrue();
         assertThat(deletedPayment.getPaymentStatus()).isEqualTo(PaymentStatus.INACTIVE);
+    }
+
+    @Test
+    void shouldUpdatePaymentStatusFromPendingToProcessedSuccessfully() {
+
+        PaymentEntity pendingPayment = new PaymentEntity(
+                PaymentMethod.CREDIT_CARD,
+                new BigInteger("500000"),
+                1,
+                PayerType.CPF,
+                "123-123-123-00",
+                "1234123412341234",
+                PaymentStatus.PENDING
+        );
+
+        PaymentEntity paymentSaved = repository.save(pendingPayment);
+
+        PatchPaymentRequest patchRequest = new PatchPaymentRequest(PaymentStatus.PROCESSED_SUCCESSFULLY);
+
+        String paymentId = paymentSaved.getId().toString();
+
+        webTestClient.patch()
+                .uri("/api/v1/payments/" + paymentId) // URL from your curl
+                .contentType(MediaType.APPLICATION_JSON)
+                .bodyValue(patchRequest)
+                .exchange()
+
+                .expectStatus().isOk()
+                .expectBody()
+                .jsonPath("$.paymentStatus").isEqualTo("PROCESSED_SUCCESSFULLY")
+                .jsonPath("$.paymentId").isEqualTo(paymentId)
+                .jsonPath("$.paymentMethod").isEqualTo("CREDIT_CARD")
+                .jsonPath("$.paymentValue").isEqualTo(500000);
+    }
+
+    @Test
+    void shouldUpdatePaymentStatusFromPendingToProcessingError() {
+
+        PaymentEntity pendingPayment = new PaymentEntity(
+                PaymentMethod.CREDIT_CARD,
+                new BigInteger("500000"),
+                1,
+                PayerType.CPF,
+                "123-123-123-00",
+                "1234123412341234",
+                PaymentStatus.PENDING
+        );
+
+        PaymentEntity paymentSaved = repository.save(pendingPayment);
+
+        PatchPaymentRequest patchRequest = new PatchPaymentRequest(PaymentStatus.PROCESSING_ERROR);
+
+        String paymentId = paymentSaved.getId().toString();
+
+        webTestClient.patch()
+                .uri("/api/v1/payments/" + paymentId) // URL from your curl
+                .contentType(MediaType.APPLICATION_JSON)
+                .bodyValue(patchRequest)
+                .exchange()
+
+                .expectStatus().isOk()
+                .expectBody()
+                .jsonPath("$.paymentStatus").isEqualTo("PROCESSING_ERROR")
+                .jsonPath("$.paymentId").isEqualTo(paymentId)
+                .jsonPath("$.paymentMethod").isEqualTo("CREDIT_CARD")
+                .jsonPath("$.paymentValue").isEqualTo(500000);
+    }
+
+    @Test
+    void shouldNotUpdatePaymentStatusFromPendingToInactive() {
+
+        PaymentEntity pendingPayment = new PaymentEntity(
+                PaymentMethod.CREDIT_CARD,
+                new BigInteger("500000"),
+                1,
+                PayerType.CPF,
+                "123-123-123-00",
+                "1234123412341234",
+                PaymentStatus.PENDING
+        );
+
+        PaymentEntity paymentSaved = repository.save(pendingPayment);
+
+        PatchPaymentRequest patchRequest = new PatchPaymentRequest(PaymentStatus.INACTIVE);
+
+        String paymentId = paymentSaved.getId().toString();
+
+        webTestClient.patch()
+                .uri("/api/v1/payments/" + paymentId) // URL from your curl
+                .contentType(MediaType.APPLICATION_JSON)
+                .bodyValue(patchRequest)
+                .exchange()
+                .expectStatus().isEqualTo(HttpStatus.UNPROCESSABLE_CONTENT);
+    }
+
+    @Test
+    void shouldNotUpdatePaymentStatusFromPendingToPending() {
+
+        PaymentEntity pendingPayment = new PaymentEntity(
+                PaymentMethod.CREDIT_CARD,
+                new BigInteger("500000"),
+                1,
+                PayerType.CPF,
+                "123-123-123-00",
+                "1234123412341234",
+                PaymentStatus.PENDING
+        );
+
+        PaymentEntity paymentSaved = repository.save(pendingPayment);
+
+        PatchPaymentRequest patchRequest = new PatchPaymentRequest(PaymentStatus.PENDING);
+
+        String paymentId = paymentSaved.getId().toString();
+
+        webTestClient.patch()
+                .uri("/api/v1/payments/" + paymentId) // URL from your curl
+                .contentType(MediaType.APPLICATION_JSON)
+                .bodyValue(patchRequest)
+                .exchange()
+                .expectStatus().isEqualTo(HttpStatus.UNPROCESSABLE_CONTENT);
+    }
+
+    @Test
+    void shouldNotUpdatePaymentStatusFromProcessedSuccessfullyToAny() {
+
+        PaymentEntity pendingPayment = new PaymentEntity(
+                PaymentMethod.CREDIT_CARD,
+                new BigInteger("500000"),
+                1,
+                PayerType.CPF,
+                "123-123-123-00",
+                "1234123412341234",
+                PaymentStatus.PROCESSED_SUCCESSFULLY
+        );
+        PaymentEntity paymentSaved = repository.save(pendingPayment);
+        String paymentId = paymentSaved.getId().toString();
+
+        PatchPaymentRequest patchRequest = new PatchPaymentRequest(PaymentStatus.PROCESSED_SUCCESSFULLY);
+
+        webTestClient.patch()
+                .uri("/api/v1/payments/" + paymentId) // URL from your curl
+                .contentType(MediaType.APPLICATION_JSON)
+                .bodyValue(patchRequest)
+                .exchange()
+                .expectStatus().isEqualTo(HttpStatus.UNPROCESSABLE_CONTENT);
+
+        PatchPaymentRequest patchRequest2 = new PatchPaymentRequest(PaymentStatus.PROCESSING_ERROR);
+        webTestClient.patch()
+                .uri("/api/v1/payments/" + paymentId) // URL from your curl
+                .contentType(MediaType.APPLICATION_JSON)
+                .bodyValue(patchRequest2)
+                .exchange()
+                .expectStatus().isEqualTo(HttpStatus.UNPROCESSABLE_CONTENT);
+
+        PatchPaymentRequest patchRequest3 = new PatchPaymentRequest(PaymentStatus.PENDING);
+        webTestClient.patch()
+                .uri("/api/v1/payments/" + paymentId) // URL from your curl
+                .contentType(MediaType.APPLICATION_JSON)
+                .bodyValue(patchRequest3)
+                .exchange()
+                .expectStatus().isEqualTo(HttpStatus.UNPROCESSABLE_CONTENT);
+
+        PatchPaymentRequest patchRequest4 = new PatchPaymentRequest(PaymentStatus.INACTIVE);
+        webTestClient.patch()
+                .uri("/api/v1/payments/" + paymentId) // URL from your curl
+                .contentType(MediaType.APPLICATION_JSON)
+                .bodyValue(patchRequest4)
+                .exchange()
+                .expectStatus().isEqualTo(HttpStatus.UNPROCESSABLE_CONTENT);
+    }
+
+    @Test
+    void shouldUpdatePaymentStatusFromProcessingErrorOnlyToPending() {
+
+        PaymentEntity pendingPayment = new PaymentEntity(
+                PaymentMethod.CREDIT_CARD,
+                new BigInteger("500000"),
+                1,
+                PayerType.CPF,
+                "123-123-123-00",
+                "1234123412341234",
+                PaymentStatus.PROCESSING_ERROR
+        );
+        PaymentEntity paymentSaved = repository.save(pendingPayment);
+        String paymentId = paymentSaved.getId().toString();
+
+        PatchPaymentRequest patchRequest = new PatchPaymentRequest(PaymentStatus.PROCESSED_SUCCESSFULLY);
+        webTestClient.patch()
+                .uri("/api/v1/payments/" + paymentId) // URL from your curl
+                .contentType(MediaType.APPLICATION_JSON)
+                .bodyValue(patchRequest)
+                .exchange()
+                .expectStatus().isEqualTo(HttpStatus.UNPROCESSABLE_CONTENT);
+
+        PatchPaymentRequest patchRequest2 = new PatchPaymentRequest(PaymentStatus.PROCESSING_ERROR);
+        webTestClient.patch()
+                .uri("/api/v1/payments/" + paymentId) // URL from your curl
+                .contentType(MediaType.APPLICATION_JSON)
+                .bodyValue(patchRequest2)
+                .exchange()
+                .expectStatus().isEqualTo(HttpStatus.UNPROCESSABLE_CONTENT);
+
+        PatchPaymentRequest patchRequest3 = new PatchPaymentRequest(PaymentStatus.INACTIVE);
+        webTestClient.patch()
+                .uri("/api/v1/payments/" + paymentId) // URL from your curl
+                .contentType(MediaType.APPLICATION_JSON)
+                .bodyValue(patchRequest3)
+                .exchange()
+                .expectStatus().isEqualTo(HttpStatus.UNPROCESSABLE_CONTENT);
+
+        PatchPaymentRequest patchRequest4 = new PatchPaymentRequest(PaymentStatus.PENDING);
+        webTestClient.patch()
+                .uri("/api/v1/payments/" + paymentId) // URL from your curl
+                .contentType(MediaType.APPLICATION_JSON)
+                .bodyValue(patchRequest4)
+                .exchange()
+                .expectBody()
+                .jsonPath("$.paymentStatus").isEqualTo("PENDING")
+                .jsonPath("$.paymentId").isEqualTo(paymentId)
+                .jsonPath("$.paymentMethod").isEqualTo("CREDIT_CARD")
+                .jsonPath("$.paymentValue").isEqualTo(500000);
     }
 }

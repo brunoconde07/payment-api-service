@@ -1,6 +1,6 @@
 package com.api.payment.payment_api_service.controller.dto;
 
-import com.api.payment.payment_api_service.domain.PaymentStatusPatch;
+import com.api.payment.payment_api_service.domain.PaymentStatus;
 import io.swagger.v3.oas.annotations.media.Schema;
 
 public record PatchPaymentResponse(
@@ -9,5 +9,5 @@ public record PatchPaymentResponse(
     String paymentId,
 
     @Schema(description = "Payment status", example = "PROCESSED_SUCCESSFULLY")
-    PaymentStatusPatch paymentStatus
+    PaymentStatus paymentStatus
 ) {}

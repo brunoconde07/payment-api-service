@@ -1,13 +1,12 @@
 package com.api.payment.payment_api_service.controller.dto;
 
-import com.api.payment.payment_api_service.domain.PaymentStatusPatch;
+import com.api.payment.payment_api_service.domain.PaymentStatus;
 import io.swagger.v3.oas.annotations.media.Schema;
+import jakarta.validation.constraints.NotNull;
 
 public record PatchPaymentRequest (
 
-    @Schema(description = "Payment id", example = "12392912")
-    String paymentId,
-
+    @NotNull
     @Schema(description = "Payment status", example = "PROCESSED_SUCCESSFULLY")
-    PaymentStatusPatch paymentStatus
+    PaymentStatus paymentStatus
 ) {}
